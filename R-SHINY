@@ -1,0 +1,77 @@
+getwd();
+cancerdata=read.csv(file.choose())
+str(cancerdata)
+cancerdata=cancerdata[,-1]
+attach(cancerdata)
+diagnosis1=ifelse(diagnosis=="M",1,0)
+detach(cancerdata)
+str(cancerdata)
+cancerdata=cancerdata[,-1]
+cancerdata1=cbind(cancerdata,diagnosis1)
+str(cancerdata1)
+names(cancerdata1)
+####EXPLORATORY GRAPHS####
+#BOXPLOT#
+par(mfrow=c(3,6))
+for(i in 1:length(cancerdata1)){
+  boxplot(cancerdata1[,i],main=names(cancerdata1)[i],las=1)
+}
+#HISTOGRAMS#
+par(mfrow=c(3,6))
+for(j in 1:length(cancerdata1)){
+  hist(cancerdata1[,j],main=names(cancerdata1)[j],col = "green",breaks = 100)
+  rug(cancerdata1[,j])
+  abline(v=mean(cancerdata1[,j],col="blue",lwd=4))
+  abline(v=median(cancerdata1[,j],col="magenta",lwd=4))       
+}
+###BARPLOT###
+attach(cancerdata)
+barplot(table(diagnosis),xlab = "diagnosis",ylab = "count",density = 100)
+detach(cancerdata)
+###COORELATION##
+
+
+#####caToolS-TO SPLIT THE DATA#####
+split=sample.split(cancerdata1,SplitRatio = 0.8)
+training=subset(cancerdata1,split=="TRUE")
+testdata=subset(cancerdata1,split=="FALSE")
+####STEP-WISE REGRESSION###
+fitstart=glm(diagnosis1~1,data = training)
+summary(fitstart)
+fitall=glm(diagnosis1~.,data = training)
+summary(fitall)
+step(fitstart,direction = "forward",scope = formula(fitall))
+#####LOGISTIC REGRESSION#### 
+model=glm(formula = diagnosis1 ~ concave.points_worst + radius_worst + 
+            texture_worst + area_worst + smoothness_se + symmetry_worst + 
+            radius_se + concave.points_se + radius_mean + concavity_mean + 
+            compactness_mean + concavity_se + fractal_dimension_worst, 
+          data = training)
+summary(model)
+str(model)
+#####PREDICTING THE MODEL####
+premodel=predict(model,testdata,type = "response")
+premodel
+diagnosisMandB=ifelse(premodel<=0,"B","M")
+diagnosisMandB
+table(diagnosisMandB)
+table(testdata$diagnosis1)
+##(actualvalue=traindata$diagnosis1,predictedvalue=premodel>0.5)
+##(80+40)/127
+####CREATING CONFUSION MATRIX####
+table(actualvalue=testdata$diagnosis1,predictedvalue=premodel>0.4)
+(85+41)/(129)
+##ROC Curve##
+b=predict(model,training,type = "response")
+ROCRPred=prediction(b,training$diagnosis1)
+ROCRPref=performance(ROCRPred,"tpr","fpr")
+plot(ROCRPref,color="TRUE",print.cutoffs.at=seq(0.1,by=0.1))
+######
+attach(training)
+table(actualvalue=training$diagnosis1,predictedvalue=premodel>0.4)
+##plot 
+plot(diagnosis1 ~ concave.points_worst + radius_worst + 
+       texture_worst + area_worst + smoothness_se + symmetry_worst + 
+       radius_se + concave.points_se + radius_mean + concavity_mean + 
+       compactness_mean + concavity_se + fractal_dimension_worst,data=training)
+lines(training$diagnosis1,diagnosisMandB,col="green",lwd=2)
